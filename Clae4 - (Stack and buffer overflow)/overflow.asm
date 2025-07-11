@@ -1,44 +1,64 @@
 .386
 .model flat, stdcall
-.stack 2096
+option casemap:none
 
-includelib kernel32.lib
-includelib user32.lib
-ExitProcess proto :DWORD
+include \masm32\include\kernel32.inc
+include \masm32\include\user32.inc
+
+includelib \masm32\lib\kernel32.lib
+includelib \masm32\lib\user32.lib
+includelib \masm32\lib\msvcrt.lib
+
+ExitProcess PROTO :DWORD ;windows api
+gets PROTO C :DWORD ;crt
+MessageBoxA PROTO :DWORD, :DWORD, :DWORD, :DWORD ;windows api
+
 .data
-    mensaje db "Volviendo de la funcion", 0
+ buffer db "000000000000" 
+ canary dd 5 ; 00000005h 4 bytes, entero de 4 bytes
+
+msg db "Stack modificado", 0
+msgg db "ok", 0
 
 .code
-
 main:
-    call mi_funcion       ; Llama a la función (guarda dirección de retorno)
-    ; Aquí se vuelve después del RET
-
-    push 0                ; código de salida
+    call vulnerable_function
+    push 0
     call ExitProcess
 
-; ---------------------------------------------------
-; Función con stack frame, variables locales, etc.
-; ---------------------------------------------------
-mi_funcion:
-    push ebp              ; Guarda el viejo EBP
-    mov ebp, esp          ; EBP apunta al inicio del frame actual
-    sub esp, 8            ; Reservamos 8 bytes para variables locales
+vulnerable_function PROC
 
-    ; Ahora:
-    ; EBP       -> viejo EBP
-    ; EBP-4     -> variable local 1
-    ; EBP-8     -> variable local 2
+; stack frame
+    push ebp
+    mov ebp, esp
+    sub esp, 16   ; 12 bytes buffer + 4 canary 
+ ;-------------------------------------------------              
+    mov eax, canary
+    mov dword ptr [ebp-4], eax ; canary en ebp-4
 
-    mov dword ptr [ebp-4], 1234h   ; Guardamos valor en la variable local 1
-    mov dword ptr [ebp-8], 5678h   ; Guardamos valor en la variable local 2
+    lea eax, [ebp-16]        ; buffer en ebp-16
+    push eax
+    call gets
+    add esp, 4
 
-    ; Simular retorno de función con valor en eax
-    mov eax, [ebp-4]               ; Devuelve el valor de la variable 1
+    cmp dword ptr [ebp-4], 5 ;comparamos si la memoria ha sido modificada usando el canary
+    jne stack_smashed
 
-    ; Deshacer el stack frame
+    ; eliminamos el stack frame 
     mov esp, ebp
     pop ebp
-    ret                            ; Vuelve a la dirección guardada en la pila
+    ret
+
+stack_smashed:
+    push 0                  ; MB_OK = 0
+    push offset msgg       ; título del MessageBox
+    push offset msg         ; mensaje
+    push 0                  ; handle ventana padre NULL
+    call MessageBoxA
+
+    push 1                  ; código de salida 1
+    call ExitProcess
+
+vulnerable_function ENDP
 
 end main
