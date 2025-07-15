@@ -162,23 +162,23 @@ strcmp:
     mov esi, [ebp + 8]
     mov edi, [ebp + 12]
 
-.loop:
+strcmp_loop:
     mov al, [esi]
     mov bl, [edi]
     cmp al, bl
-    jne .notequal
+    jne strcmp_notequal
     test al, al
-    je .equal
+    je strcmp_equal
     inc esi
     inc edi
-    jmp .loop
+    jmp strcmp_loop
 
-.equal:
+strcmp_equal:
     xor eax, eax
     pop ebp
     ret
 
-.notequal:
+strcmp_notequal:
     mov eax, 1
     pop ebp
     ret
