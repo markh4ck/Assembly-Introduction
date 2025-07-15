@@ -1,7 +1,9 @@
 ; MASM32 - 32-bit Windows, sin includes
 
+.386    
 .model flat, stdcall
 .stack 4096
+option casemap:none
 
 .data
     command db 'calc.exe', 0
